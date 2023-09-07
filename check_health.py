@@ -1,10 +1,23 @@
-# Check if earthworm is receiving data
+"""
+Earthworm Health Checker
+
+This script performs health checks for an Earthworm system, which is used for seismic data processing.
+It checks the following aspects:
+1. Connection to the SSN server.
+2. Whether Earthworm is receiving data (using the 'sniffwave' command).
+3. Any issues in the Earthworm logs.
+
+The results of these checks can be sent to a Telegram channel if configured.
+
+Usage:
+- Run the script with optional arguments to customize the behavior.
+
+"""
 import argparse
 from enum import Enum
 import logging
 import os
 import subprocess
-import sys
 import time
 from telegrambot import TelegramBot
 from typing import Optional
@@ -93,7 +106,7 @@ def check_sniff() -> Status:
     process.terminate()
     stdout, stderr = process.communicate()
 
-    if len(stdout) > 0:
+    if len(stdout) > 0 and "ERROR" not in stdout:
         return Status.HEALTHY
 
     return Status.UNHEALTHY
@@ -122,7 +135,6 @@ def check_logs() -> tuple[Status, str]:
         for line in fp.readlines():
             line = line.strip()
             if "Failed to set up TCP client connection" in line:
-                print("Found error")
                 return Status.UNHEALTHY, latest_log
 
     return Status.HEALTHY, ""

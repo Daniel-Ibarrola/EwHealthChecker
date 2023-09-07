@@ -1,1 +1,6 @@
+certifi==2023.7.22
+charset-normalizer==3.2.0
+idna==3.4
+requests==2.31.0
 telegrambot @ git+https://github.com/Daniel-Ibarrola/TelegramBot@0e098eb108a6d598e0d753928bc0f311b2310da2
+urllib3==2.0.4
