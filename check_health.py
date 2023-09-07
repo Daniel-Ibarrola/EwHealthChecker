@@ -1,8 +1,13 @@
 # Check if earthworm is receiving data
+import argparse
 from enum import Enum
+import logging
 import os
 import subprocess
+import sys
 import time
+from telegrambot import TelegramBot
+from typing import Optional
 
 
 class Status(Enum):
@@ -10,6 +15,23 @@ class Status(Enum):
     HEALTHY = 1
     UNHEALTHY = 2
     ERROR = 3
+
+
+def get_logger() -> logging.Logger:
+    """ Get the logger with a stream handler. Doesn't log to files.
+     """
+    logger = logging.getLogger(__name__)
+    formatter = logging.Formatter(
+        '%(asctime)s [%(name)-12s] %(levelname)-5s %(message)s'
+    )
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+
+    logger.setLevel(logging.INFO)
+
+    return logger
 
 
 def set_ew_env_variables(env: dict[str, str]) -> None:
@@ -56,7 +78,7 @@ def check_connection() -> Status:
 def check_sniff() -> Status:
     """ Use 'sniffwave' command to check if earthworm is receiving data.
     """
-    command = ["sniffwave",  "WAVE_RING"]
+    command = ["sniffwave", "WAVE_RING"]
     env = os.environ.copy()
     set_ew_env_variables(env)
     process = subprocess.Popen(
@@ -106,35 +128,119 @@ def check_logs() -> tuple[Status, str]:
     return Status.HEALTHY, ""
 
 
-def main() -> None:
+def send_to_telegram(
+                 msg: str,
+                 status: Status,
+                 report_healthy: bool,
+                 logger: logging.Logger,
+                 bot: Optional[TelegramBot],
+                 chat_id: str = "") -> None:
+    """ Send health check status to telegram
+    """
+    if bot is not None:
+        if (status == Status.HEALTHY and report_healthy) \
+                or status == Status.UNHEALTHY:
+            success, status_code, _ = bot.send_message(msg, chat_id)
+            if not success:
+                logger.info(f"Failed to send message with bot. Status code: {status_code}")
+
+
+def health_checks(logger: logging.Logger,
+                  bot: Optional[TelegramBot] = None,
+                  chat_id: str = "",
+                  report_healthy: bool = False
+                  ) -> None:
     """ Check that earthworm has a connection established for receiving data,
         that the wave ring is receiving data, and that there are no connection
         issues in earthworm logs.
+
+        If a telegram bot is given the status of the health checks will be sent to
+        telegram.
     """
     conn_status = check_connection()
     if conn_status == Status.HEALTHY:
-        print("Connection to SSN is healthy")
+        msg = "Connection to SSN is healthy"
     elif conn_status == Status.UNHEALTHY:
-        print("Failed to establish connection to SSN")
+        msg = "Failed to establish connection to SSN"
     else:
-        print(f"Connection health check failed")
+        msg = f"Connection health check failed"
+
+    logger.info(msg)
+    send_to_telegram(msg, conn_status, report_healthy, logger, bot, chat_id)
 
     sniff_status = check_sniff()
     if sniff_status == Status.HEALTHY:
-        print("Earthworm is receiving data")
+        msg = "Earthworm is receiving data"
     elif sniff_status == Status.UNHEALTHY:
-        print("Earthworm is not receiving data")
+        msg = "Earthworm is not receiving data"
     else:
-        print("Sniff health check failed")
+        msg = "Sniff health check failed"
+
+    logger.info(msg)
+    send_to_telegram(msg, conn_status, report_healthy, logger, bot, chat_id)
 
     if conn_status == Status.UNHEALTHY or sniff_status == Status.UNHEALTHY:
         log_status, log_file = check_logs()
         if log_status == Status.HEALTHY:
-            print("No issues find in logs")
+            msg = "No issues find in logs"
         elif log_status == Status.UNHEALTHY:
-            print(f"Found issues in log: {log_file}")
+            msg = f"Found issues in log: {log_file}"
         else:
-            print(f"Error: logs health check failed. {log_file}")
+            msg = f"Error: logs health check failed. {log_file}"
+
+    logger.info(msg)
+    send_to_telegram(msg, conn_status, report_healthy, logger, bot, chat_id)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Perform regular health checks for earthworm"
+    )
+    parser.add_argument(
+        "--interval",
+        "-i",
+        type=float,
+        default=30,
+        help="Interval of the health checks in minutes"
+    )
+    parser.add_argument(
+        "--telegram",
+        "-t",
+        action="store_true",
+        help="Whether to send the status of the health checks"
+             " to telegram"
+    )
+    parser.add_argument(
+        "--good-news",
+        "-g",
+        action="store_true",
+        help="Whether to send the status of the health checks to telegram"
+             " if they are healthy. Default behavior is to report only"
+             " unhealthy status."
+    )
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    interval = args.interval * 60
+    use_bot: bool = args.telegram
+    report_healthy: bool = args.good_news
+
+    if use_bot:
+        bot = TelegramBot(os.environ["BOT_TOKEN"])
+        chat_id = os.environ["CHAT_ID"]
+    else:
+        bot = None
+        chat_id = ""
+
+    logger = get_logger()
+    logger.info("Earthworm Health Checker")
+    logger.info(f"Health checks interval: {interval / 60} minute(s)")
+
+    while True:
+        health_checks(logger, bot, chat_id, report_healthy)
+        time.sleep(interval)
 
 
 if __name__ == "__main__":
