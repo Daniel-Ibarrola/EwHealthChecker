@@ -22,7 +22,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Optionally, Set up a Telegram bot for notifications. Create a .env file with the following variables 
+Optionally, set up a Telegram bot for notifications. Create a .env file with the following variables 
 BOT_TOKEN and CHAT_ID, which contain the token of the bot you want to use and the id of
 the chats where the messages will be sent.
 
@@ -38,10 +38,36 @@ You can customize the script behavior with the following optional command-line a
 - `--good-news` or `-g`: Report healthy status to Telegram (by default, only unhealthy status is reported).
 
 
+## Using systemd to run the script
+
+The script can be run with systemd. To do that, modify the WorkingDirectory, EnvironmentFile and
+ExecStart of the ew_health_check.service with the actual paths. Then use the following commands
+to enable it:
+
+Copy the file.
+
+```shell
+sudo cp ew_health_check.service /etc/systemd/system/ew_health_check.service
+```
+
+Enable the service and start
+
+```shell
+sudo systemctl deamon reload
+sudo systemctl enable ew_health_check
+sudo systemctl start ew_health_check
+```
+
+Check status to see if it's working correctly:
+
+```shell
+sudo systemctl status ew_health_check
+```
+
 ## Author
 
 This script was created by Daniel Ibarrola.
 
 ## Acknowledgments
 
-- The Earthworm Health Checker script is based on the Earthworm seismic data processing system.
+The Earthworm Health Checker script is based on the Earthworm seismic data processing system.
