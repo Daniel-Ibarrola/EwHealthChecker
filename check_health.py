@@ -114,8 +114,6 @@ def check_sniff() -> Status:
 
 def check_logs() -> tuple[Status, str]:
     """ Check the logs of the import_ack module from earthworm.
-
-
     """
     logs_path = "/home/daniel/ew/pozo/log/"
     import_files = []
@@ -171,22 +169,22 @@ def health_checks(logger: logging.Logger,
     """
     conn_status = check_connection()
     if conn_status == Status.HEALTHY:
-        msg = "Connection to SSN is healthy"
+        msg = "Conexión con SSN establecida."
     elif conn_status == Status.UNHEALTHY:
-        msg = "Failed to establish connection to SSN"
+        msg = "No se pudo establecer la conexión con el SSN."
     else:
-        msg = f"Connection health check failed"
+        msg = f"Error: falló la prueba de conexión."
 
     logger.info(msg)
     send_to_telegram(msg, conn_status, report_healthy, logger, bot, chat_id)
 
     sniff_status = check_sniff()
     if sniff_status == Status.HEALTHY:
-        msg = "Earthworm is receiving data"
+        msg = "Earthworm esta recibiendo datos."
     elif sniff_status == Status.UNHEALTHY:
-        msg = "Earthworm is not receiving data"
+        msg = "Earthworm no esta recibiendo datos."
     else:
-        msg = "Sniff health check failed"
+        msg = "Error: falló la prueba de sniffwave."
 
     logger.info(msg)
     send_to_telegram(msg, conn_status, report_healthy, logger, bot, chat_id)
@@ -194,14 +192,14 @@ def health_checks(logger: logging.Logger,
     if conn_status == Status.UNHEALTHY or sniff_status == Status.UNHEALTHY:
         log_status, log_file = check_logs()
         if log_status == Status.HEALTHY:
-            msg = "No issues find in logs"
+            msg = "No se encontraron errores en los logs,"
         elif log_status == Status.UNHEALTHY:
-            msg = f"Found issues in log: {log_file}"
+            msg = f"Se encontró un error en el archivo de log: {log_file}"
         else:
-            msg = f"Error: logs health check failed. {log_file}"
+            msg = f"Error: falló la prueba de checar logs. {log_file}"
 
-    logger.info(msg)
-    send_to_telegram(msg, conn_status, report_healthy, logger, bot, chat_id)
+        logger.info(msg)
+        send_to_telegram(msg, conn_status, report_healthy, logger, bot, chat_id)
 
 
 def parse_args() -> argparse.Namespace:
