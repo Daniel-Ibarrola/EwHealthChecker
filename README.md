@@ -33,35 +33,23 @@ python check_health.py
 ```
 
 You can customize the script behavior with the following optional command-line arguments:
-- `--interval` or `-i`: Set the interval (in minutes) for health checks (default is 30 minutes).
 - `--telegram` or `-t`: Enable Telegram notifications.
 - `--good-news` or `-g`: Report healthy status to Telegram (by default, only unhealthy status is reported).
 
 
-## Using systemd to run the script
+## Running as a Cron Job
 
-The script can be run with systemd. To do that, modify the WorkingDirectory, EnvironmentFile and
-ExecStart of the ew_health_check.service with the actual paths. Then use the following commands
-to enable it:
+To run the script as a cron job use the following commands:
 
-Copy the file.
-
+Edit your user's crontab using the crontab -e command:
 ```shell
-sudo cp ew_health_check.service /etc/systemd/system/ew_health_check.service
+crontab -e
 ```
 
-Enable the service and start
+Add the following line. Adjust Python interpreter and script path accordingly.
 
 ```shell
-sudo systemctl deamon reload
-sudo systemctl enable ew_health_check
-sudo systemctl start ew_health_check
-```
-
-Check status to see if it's working correctly:
-
-```shell
-sudo systemctl status ew_health_check
+0 * * * * /home/daniel/EwHealthChecker/venv/bin/python /home/daniel/EwHealthChecker/src/ew/check_health.py -t
 ```
 
 ## Author

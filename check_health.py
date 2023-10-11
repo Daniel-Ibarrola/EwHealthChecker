@@ -207,13 +207,6 @@ def parse_args() -> argparse.Namespace:
         description="Perform regular health checks for earthworm"
     )
     parser.add_argument(
-        "--interval",
-        "-i",
-        type=float,
-        default=30,
-        help="Interval of the health checks in minutes"
-    )
-    parser.add_argument(
         "--telegram",
         "-t",
         action="store_true",
@@ -233,24 +226,21 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
-    interval = args.interval * 60
     use_bot: bool = args.telegram
     report_healthy: bool = args.good_news
+
+    logger = get_logger()
+    logger.info("Checking earthworm health")
 
     if use_bot:
         bot = TelegramBot(os.environ["BOT_TOKEN"])
         chat_id = os.environ["CHAT_ID"]
+        logger.info(f"Telegram bot set")
     else:
         bot = None
         chat_id = ""
 
-    logger = get_logger()
-    logger.info("Earthworm Health Checker")
-    logger.info(f"Health checks interval: {interval / 60} minute(s)")
-
-    while True:
-        health_checks(logger, bot, chat_id, report_healthy)
-        time.sleep(interval)
+    health_checks(logger, bot, chat_id, report_healthy)
 
 
 if __name__ == "__main__":
